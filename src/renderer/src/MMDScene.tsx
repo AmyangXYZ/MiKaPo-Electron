@@ -37,9 +37,16 @@ function MMDScene({
   const shadowGeneratorRef = useRef<ShadowGenerator | null>(null)
 
   useEffect(() => {
-    const createScene = (canvas: HTMLCanvasElement): Scene => {
+    const createScene = async (canvas: HTMLCanvasElement): Promise<Scene> => {
       const engine = new Engine(canvas, true, {}, true)
       const scene = new Scene(engine)
+
+      const physicsInstance = await ammoPhysics()
+      const physicsPlugin = new MmdAmmoJSPlugin(true, physicsInstance)
+      scene.enablePhysics(new Vector3(0, -98, 0), physicsPlugin)
+      mmdRuntimeRef.current = new MmdRuntime(scene, new MmdAmmoPhysics(scene))
+      mmdRuntimeRef.current.register(scene)
+
       const camera = new ArcRotateCamera('ArcRotateCamera', 0, 0, 45, new Vector3(0, 12, 0), scene)
       camera.setPosition(new Vector3(0, 20, -25))
       camera.attachControl(canvas, false)
@@ -89,16 +96,10 @@ function MMDScene({
       return scene
     }
 
-    const loadMMD = async (scene: Scene | null): Promise<void> => {
-      if (!scene) return
-      const physicsInstance = await ammoPhysics()
-      const physicsPlugin = new MmdAmmoJSPlugin(true, physicsInstance)
-      scene.enablePhysics(new Vector3(0, -98, 0), physicsPlugin)
+    const loadMMD = async (): Promise<void> => {
+      if (!sceneRef.current) return
 
-      mmdRuntimeRef.current = new MmdRuntime(scene, new MmdAmmoPhysics(scene))
-      mmdRuntimeRef.current.register(scene)
-
-      SceneLoader.ImportMeshAsync(undefined, `./model/Thoth/`, `Thoth.pmx`, scene).then(
+      SceneLoader.ImportMeshAsync(undefined, `./model/Thoth/`, `Thoth.pmx`, sceneRef.current).then(
         (result) => {
           const mesh = result.meshes[0]
           for (const m of mesh.metadata.meshes) {
@@ -111,56 +112,58 @@ function MMDScene({
     }
 
     if (canvasRef.current) {
-      sceneRef.current = createScene(canvasRef.current)
-      loadMMD(sceneRef.current)
+      createScene(canvasRef.current).then((scene) => {
+        sceneRef.current = scene
+        loadMMD()
+      })
     }
   }, [setFps])
 
   useEffect(() => {
+    const lerpFactor = 0.5
+    const scale = 10
+    const yOffset = 8
+    const visibilityThreshold = 0.1
+    const keypointIndexByName: { [key: string]: number } = {
+      nose: 0,
+      left_eye_inner: 1,
+      left_eye: 2,
+      left_eye_outer: 3,
+      right_eye_inner: 4,
+      right_eye: 5,
+      right_eye_outer: 6,
+      left_ear: 7,
+      right_ear: 8,
+      mouth_left: 9,
+      mouth_right: 10,
+      left_shoulder: 11,
+      right_shoulder: 12,
+      left_elbow: 13,
+      right_elbow: 14,
+      left_wrist: 15,
+      right_wrist: 16,
+      left_pinky: 17,
+      right_pinky: 18,
+      left_index: 19,
+      right_index: 20,
+      left_thumb: 21,
+      right_thumb: 22,
+      left_hip: 23,
+      right_hip: 24,
+      left_knee: 25,
+      right_knee: 26,
+      left_ankle: 27,
+      right_ankle: 28,
+      left_heel: 29,
+      right_heel: 30,
+      left_foot_index: 31,
+      right_foot_index: 32
+    }
     const updateMMDPose = (mmdModel: MmdModel | null, pose: NormalizedLandmark[] | null): void => {
       if (!pose || !mmdModel) {
         return
       }
 
-      const lerpFactor = 0.5
-      const scale = 10
-      const yOffset = 8
-      const visibilityThreshold = 0.1
-      const keypointIndexByName: { [key: string]: number } = {
-        nose: 0,
-        left_eye_inner: 1,
-        left_eye: 2,
-        left_eye_outer: 3,
-        right_eye_inner: 4,
-        right_eye: 5,
-        right_eye_outer: 6,
-        left_ear: 7,
-        right_ear: 8,
-        mouth_left: 9,
-        mouth_right: 10,
-        left_shoulder: 11,
-        right_shoulder: 12,
-        left_elbow: 13,
-        right_elbow: 14,
-        left_wrist: 15,
-        right_wrist: 16,
-        left_pinky: 17,
-        right_pinky: 18,
-        left_index: 19,
-        right_index: 20,
-        left_thumb: 21,
-        right_thumb: 22,
-        left_hip: 23,
-        right_hip: 24,
-        left_knee: 25,
-        right_knee: 26,
-        left_ankle: 27,
-        right_ankle: 28,
-        left_heel: 29,
-        right_heel: 30,
-        left_foot_index: 31,
-        right_foot_index: 32
-      }
       const getKeypoint = (name: string): Vector3 | null => {
         const point = pose[keypointIndexByName[name]]
         return point.visibility > visibilityThreshold
@@ -317,6 +320,34 @@ function MMDScene({
         }
       }
 
+      const rotateFoot = (side: 'right' | 'left'): void => {
+        const hip = getKeypoint(`${side}_hip`)
+        const ankle = getKeypoint(`${side}_ankle`)
+        const footBone = getBone(`${side === 'right' ? '右' : '左'}足首`)
+
+        if (hip && ankle && footBone) {
+          const footDir = ankle.subtract(hip).normalize()
+          footDir.y = 0 // Ensure the foot stays level with the ground
+
+          const defaultDir = new Vector3(0, 0, 1) // Assuming default foot direction is forward
+
+          const rotationQuaternion = Quaternion.FromUnitVectorsToRef(
+            defaultDir,
+            footDir,
+            new Quaternion()
+          )
+
+          footBone.setRotationQuaternion(
+            Quaternion.Slerp(
+              footBone.rotationQuaternion || new Quaternion(),
+              rotationQuaternion,
+              lerpFactor
+            ),
+            Space.WORLD
+          )
+        }
+      }
+
       const rotateUpperArm = (side: 'left' | 'right'): void => {
         const shoulder = getKeypoint(`${side}_shoulder`)
         const elbow = getKeypoint(`${side}_elbow`)
@@ -461,6 +492,8 @@ function MMDScene({
       rotateHip('left')
       moveFoot('right')
       moveFoot('left')
+      rotateFoot('right')
+      rotateFoot('left')
       rotateUpperArm('right')
       rotateUpperArm('left')
       rotateLowerArm('right')

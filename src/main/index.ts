@@ -2,6 +2,9 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { Ollama } from 'ollama'
+
+const ollama = new Ollama()
 
 function createWindow(): void {
   // Create the browser window.
@@ -24,6 +27,20 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
+  })
+
+  // Handle IPC messages from renderer
+  ipcMain.handle('ollama-generate', async (_, modelName, prompt) => {
+    try {
+      const response = await ollama.generate({
+        model: modelName,
+        prompt: prompt
+      })
+      return response
+    } catch (error) {
+      console.error('Error in ollama-generate:', error)
+      throw error
+    }
   })
 
   // HMR for renderer base on electron-vite cli.
