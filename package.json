@@ -24,7 +24,12 @@
     "@babylonjs/core": "^7.25.1",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@fontsource/roboto": "^5.1.0",
     "@mediapipe/tasks-vision": "^0.10.15",
+    "@mui/icons-material": "^6.1.1",
+    "@mui/material": "^6.1.1",
     "babylon-mmd": "^0.54.0",
     "electron-updater": "^6.1.7",
     "ollama": "^0.5.9"

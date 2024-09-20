@@ -1,6 +1,6 @@
-# mikapo-electron
+# MiKaPo-Electron
 
-An Electron application with React and TypeScript
+Desktop version of [MiKaPo](https://mikapo.amyang.dev), supports ollama.
 
 ## Recommended IDE Setup
 
