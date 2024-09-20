@@ -3,6 +3,7 @@ import {
   ArcRotateCamera,
   BackgroundMaterial,
   Color3,
+  Color4,
   DirectionalLight,
   Engine,
   HemisphericLight,
@@ -25,12 +26,10 @@ import ammoPhysics from './ammo/ammo.wasm'
 
 function MMDScene({
   pose,
-  face,
-  setFps
+  face
 }: {
   pose: NormalizedLandmark[] | null
   face: NormalizedLandmark[] | null
-  setFps: (fps: number) => void
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
@@ -42,6 +41,7 @@ function MMDScene({
     const createScene = async (canvas: HTMLCanvasElement): Promise<Scene> => {
       const engine = new Engine(canvas, true, {}, true)
       const scene = new Scene(engine)
+      scene.clearColor = new Color4(0, 0, 0, 0)
 
       const physicsInstance = await ammoPhysics()
       const physicsPlugin = new MmdAmmoJSPlugin(true, physicsInstance)
@@ -82,8 +82,8 @@ function MMDScene({
       backgroundMaterial.useRGBColor = false
       backgroundMaterial.primaryColor = Color3.Magenta()
       const ground = MeshBuilder.CreateGround('Ground', {
-        width: 28,
-        height: 28,
+        width: 36,
+        height: 36,
         subdivisions: 2,
         updatable: false
       })
@@ -91,7 +91,6 @@ function MMDScene({
       ground.receiveShadows = true
 
       engine.runRenderLoop(() => {
-        setFps(Math.round(engine.getFps()))
         engine.resize()
         scene!.render()
       })
@@ -119,7 +118,7 @@ function MMDScene({
         loadMMD()
       })
     }
-  }, [setFps])
+  }, [])
 
   useEffect(() => {
     const lerpFactor = 0.5
@@ -606,7 +605,7 @@ function MMDScene({
       }
 
       // Directly control eye bones instead of using morph targets
-      const controlEyeBones = (scene: Scene, averageGaze: { x: number; y: number }) => {
+      const controlEyeBones = (scene: Scene, averageGaze: { x: number; y: number }): void => {
         const leftEyeBone = scene.getBoneByName('左目')
         const rightEyeBone = scene.getBoneByName('右目')
 

@@ -9,7 +9,7 @@ const ollama = new Ollama()
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 560,
     height: 800,
     show: false,
     autoHideMenuBar: true,
@@ -18,6 +18,8 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
     }
+    // frame: false,
+    // transparent: true
   })
 
   mainWindow.on('ready-to-show', () => {

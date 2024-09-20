@@ -1,17 +1,27 @@
 @import './base.css';
 
+* {
+  outline: none !important;
+}
+
+:focus {
+  outline: none !important;
+}
+
 body {
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   background-image: url('./wavy-lines.svg');
+  /* background:transparent */
   background-size: cover;
   user-select: none;
 }
 
 #root {
   width: 100%;
+  height: 100vh;
 }
 
 .react {
@@ -22,27 +32,12 @@ body {
   font-weight: 700;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: -1.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-bottom: 0.5rem;
-}
-
-.header-item {
-  display: flex;
-  align-items: center;
-}
-
 .loading-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -69,51 +64,41 @@ body {
   }
 }
 
-.container {
-  display: flex;
-  justify-content: space-around;
+.toolbar {
+  top: 0;
+  left: 0;
   width: 100%;
+  z-index: 1010;
 }
 
 .videoContainer {
-  width: 45%;
-  height: calc(100vh - 8rem);
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.videoPlayer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 100%;
+  z-index: 3;
 }
 
-.toolbar {
-  z-index: 1002;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  height: 2rem;
-}
-
-.toolbar-item {
-  align-items: center;
-  height: 1.5rem;
-  max-width: 17%;
-}
-
-.toolbar-item .MuiFormControlLabel-label,
-.toolbar-item .MuiTypography-root {
-  font-size: 0.85rem;
+video {
+  width: 160px;
+  z-index: 2;
 }
 
 .scene {
-  width: 45%;
-  height: calc(100vh - 6.2rem);
-  border-radius: 8px;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  /* border-radius: 8px; */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-a {
-  color: inherit;
+.chat {
+  position: absolute;
+  width: 200px;
+  bottom: 10%;
+  right: 15%;
+  width: 70%;
+  z-index: 1010;
 }

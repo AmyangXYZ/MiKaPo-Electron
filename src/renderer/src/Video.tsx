@@ -4,13 +4,11 @@ import {
   FilesetResolver,
   PoseLandmarker,
   NormalizedLandmark,
-  DrawingUtils,
   FaceLandmarker
 } from '@mediapipe/tasks-vision'
-import { Button, FormControlLabel, Switch, Typography } from '@mui/material'
-import { Videocam, CloudUpload } from '@mui/icons-material'
+import { IconButton } from '@mui/material'
+import { Videocam, CloudUpload, Settings } from '@mui/icons-material'
 import { styled } from '@mui/material/styles'
-import { blue, green } from '@mui/material/colors'
 
 const defaultVideoSrc = './zhiyin.mp4'
 
@@ -34,12 +32,8 @@ function Video({
   setFace: (face: NormalizedLandmark[]) => void
 }): JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [videoSrc, setVideoSrc] = useState<string>(defaultVideoSrc)
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false)
-  const isDebug = useRef<boolean>(true)
-  const isPoseDetectionEnabled = useRef<boolean>(true)
-  const isFaceDetectionEnabled = useRef<boolean>(true)
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const file = event.target.files?.[0]
@@ -80,15 +74,6 @@ function Video({
     }
   }
 
-  const toggleDebug = (): void => {
-    isDebug.current = !isDebug.current
-    if (!isDebug.current && canvasRef.current) {
-      canvasRef.current
-        .getContext('2d')
-        ?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
-    }
-  }
-
   useEffect(() => {
     FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
@@ -119,29 +104,6 @@ function Video({
         minFaceDetectionConfidence: 0.2
       })
 
-      const canvasCtx = canvasRef.current?.getContext('2d')
-      if (canvasCtx) {
-        canvasCtx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
-      }
-      const drawingUtils = new DrawingUtils(canvasCtx as CanvasRenderingContext2D)
-
-      const drawPose = (landmarks: NormalizedLandmark[]): void => {
-        drawingUtils.drawLandmarks(landmarks, {
-          radius: 2
-        })
-        drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
-          color: 'white',
-          lineWidth: 3
-        })
-      }
-
-      const drawFace = (landmarks: NormalizedLandmark[]): void => {
-        drawingUtils.drawConnectors(landmarks, FaceLandmarker.FACE_LANDMARKS_TESSELATION, {
-          color: 'white',
-          lineWidth: 1
-        })
-      }
-
       let lastTime = performance.now()
       const detect = (): void => {
         if (
@@ -149,35 +111,13 @@ function Video({
           lastTime != videoRef.current.currentTime &&
           videoRef.current.videoWidth > 0
         ) {
-          if (canvasCtx) {
-            canvasCtx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height)
-          }
-
           lastTime = videoRef.current.currentTime
-          if (isPoseDetectionEnabled.current) {
-            poseLandmarker.detectForVideo(videoRef.current, performance.now(), (result) => {
-              setPose(result.worldLandmarks[0])
-              if (canvasRef.current && isDebug.current) {
-                drawPose(result.landmarks[0])
-              }
-            })
-          } else {
-            setPose([])
-          }
+          poseLandmarker.detectForVideo(videoRef.current, performance.now(), (result) => {
+            setPose(result.worldLandmarks[0])
+          })
 
-          if (isFaceDetectionEnabled.current) {
-            const faceResult = faceLandmarker.detectForVideo(
-              videoRef.current,
-              performance.now(),
-              {}
-            )
-            setFace(faceResult.faceLandmarks[0])
-            if (canvasRef.current && faceResult.faceLandmarks.length > 0 && isDebug.current) {
-              drawFace(faceResult.faceLandmarks[0])
-            }
-          } else {
-            setFace([])
-          }
+          const faceResult = faceLandmarker.detectForVideo(videoRef.current, performance.now(), {})
+          setFace(faceResult.faceLandmarks[0])
         }
         requestAnimationFrame(detect)
       }
@@ -185,114 +125,36 @@ function Video({
     })
   }, [setPose, setFace])
 
-  useEffect(() => {
-    const resizeCanvas = (): void => {
-      if (videoRef.current && canvasRef.current) {
-        const videoWidth = videoRef.current.videoWidth
-        const videoHeight = videoRef.current.videoHeight
-        const containerWidth = videoRef.current.clientWidth
-        const containerHeight = videoRef.current.clientHeight
-
-        const scale = Math.min(containerWidth / videoWidth, containerHeight / videoHeight)
-        const scaledWidth = videoWidth * scale
-        const scaledHeight = videoHeight * scale
-
-        canvasRef.current.width = scaledWidth
-        canvasRef.current.height = scaledHeight
-        canvasRef.current.style.left = `${(containerWidth - scaledWidth) / 2}px`
-        canvasRef.current.style.top = `${(containerHeight - scaledHeight) / 2}px`
-      }
-    }
-
-    const videoElement = videoRef.current
-    if (videoElement) {
-      videoElement.addEventListener('loadedmetadata', resizeCanvas)
-      window.addEventListener('resize', resizeCanvas)
-    }
-
-    return (): void => {
-      if (videoElement) {
-        videoElement.removeEventListener('loadedmetadata', resizeCanvas)
-      }
-      window.removeEventListener('resize', resizeCanvas)
-    }
-  }, [])
   return (
     <div className="videoContainer">
       <div className="toolbar">
-        <Button
-          className="toolbar-item"
-          component="label"
-          role={undefined}
-          variant="contained"
-          tabIndex={-1}
-          startIcon={<CloudUpload />}
-          sx={{ backgroundColor: blue[500], '&:hover': { backgroundColor: blue[700] } }}
-        >
+        <IconButton color="info" component="label">
+          <Settings />
+        </IconButton>
+
+        <IconButton color="secondary" component="label" disabled={isCameraActive}>
+          <CloudUpload />
           <VisuallyHiddenInput
             type="file"
             onChange={handleFileUpload}
             accept="video/*"
             disabled={isCameraActive}
           />
-        </Button>
+        </IconButton>
 
-        <Button
-          className="toolbar-item"
-          variant="contained"
-          endIcon={<Videocam />}
-          onClick={toggleCamera}
-          sx={{ backgroundColor: green[500], '&:hover': { backgroundColor: green[700] } }}
-        ></Button>
+        <IconButton onClick={toggleCamera} color="error">
+          <Videocam />
+        </IconButton>
+      </div>
 
-        <FormControlLabel
-          className="toolbar-item"
-          style={{ marginLeft: '1.5rem' }}
-          control={
-            <Switch
-              checked={isPoseDetectionEnabled.current}
-              onChange={(e) => (isPoseDetectionEnabled.current = e.target.checked)}
-              color="secondary"
-            />
-          }
-          label="Pose"
-        />
-        <FormControlLabel
-          className="toolbar-item"
-          control={
-            <Switch
-              checked={isFaceDetectionEnabled.current}
-              onChange={(e) => (isFaceDetectionEnabled.current = e.target.checked)}
-              color="secondary"
-            />
-          }
-          label="Face"
-        />
-        <FormControlLabel
-          className="toolbar-item"
-          control={<Switch checked={isDebug.current} onChange={toggleDebug} color="warning" />}
-          label="Landmark"
-        />
-      </div>
-      <div className="videoPlayer" style={{ position: 'relative' }}>
-        <video
-          ref={videoRef}
-          controls={!isCameraActive}
-          playsInline
-          disablePictureInPicture
-          controlsList="nofullscreen noremoteplayback"
-          src={isCameraActive ? undefined : videoSrc}
-          style={{ width: '100%', height: '100%' }}
-        />
-        <canvas
-          ref={canvasRef}
-          style={{
-            position: 'absolute',
-            zIndex: '1001',
-            pointerEvents: 'none'
-          }}
-        />
-      </div>
+      <video
+        ref={videoRef}
+        controls={!isCameraActive}
+        playsInline
+        disablePictureInPicture
+        controlsList="nofullscreen noremoteplayback"
+        src={isCameraActive ? undefined : videoSrc}
+      />
     </div>
   )
 }
