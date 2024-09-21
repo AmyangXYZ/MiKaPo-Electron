@@ -14,7 +14,7 @@ function Chat(): JSX.Element {
     }
     generate()
   }, [])
-  return <div className="chat">ollama: {chat.current}</div>
+  return <div className="chat">{chat.current}</div>
 }
 
 export default Chat
