@@ -65,21 +65,18 @@ body {
 }
 
 .toolbar {
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 1010;
-}
-
-.videoContainer {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   z-index: 3;
+  height: 2rem;
 }
 
 video {
+  position: absolute;
+  top: 2.2rem;
+  left: 0;
   width: 160px;
   z-index: 2;
 }

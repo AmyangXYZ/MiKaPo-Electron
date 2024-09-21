@@ -1,5 +1,5 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { basename, dirname, join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { Ollama } from 'ollama'
@@ -16,7 +16,8 @@ function createWindow(): void {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      webSecurity: false
     }
     // frame: false,
     // transparent: true
@@ -43,6 +44,26 @@ function createWindow(): void {
       console.error('Error in ollama-generate:', error)
       throw error
     }
+  })
+
+  ipcMain.on('dialog-char', (event) => {
+    dialog
+      .showOpenDialog(mainWindow, {
+        properties: ['openFile'],
+        filters: [{ name: 'Char', extensions: ['pmx'] }]
+      })
+      .then((result) => {
+        if (!result.canceled) {
+          const filePath = result.filePaths[0]
+          event.reply('selected-char', {
+            dir: 'file://' + dirname(filePath) + '/',
+            name: basename(filePath)
+          })
+        }
+      })
+      .catch((err) => {
+        console.log(err)
+      })
   })
 
   // HMR for renderer base on electron-vite cli.

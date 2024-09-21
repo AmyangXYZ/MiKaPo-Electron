@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ArcRotateCamera,
   BackgroundMaterial,
@@ -33,8 +33,11 @@ function MMDScene({
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
-  const mmdModelRef = useRef<MmdModel | null>(null)
+  const [sceneRendered, setSceneRendered] = useState<boolean>(false)
+  const [mmdModelDir, setMmdModelDir] = useState<string>('./model/Thoth/')
+  const [mmdModelPath, setMmdModelPath] = useState<string>('Thoth.pmx')
   const mmdRuntimeRef = useRef<MmdRuntime | null>(null)
+  const mmdModelRef = useRef<MmdModel | null>(null)
   const shadowGeneratorRef = useRef<ShadowGenerator | null>(null)
 
   useEffect(() => {
@@ -97,10 +100,29 @@ function MMDScene({
       return scene
     }
 
-    const loadMMD = async (): Promise<void> => {
-      if (!sceneRef.current) return
+    if (canvasRef.current) {
+      createScene(canvasRef.current).then((scene) => {
+        sceneRef.current = scene
+        setSceneRendered(true)
+      })
+    }
+  }, [])
 
-      SceneLoader.ImportMeshAsync(undefined, `./model/Thoth/`, `Thoth.pmx`, sceneRef.current).then(
+  useEffect(() => {
+    window.electron.ipcRenderer.on('selected-char', (_, data) => {
+      setMmdModelDir(data.dir)
+      setMmdModelPath(data.name)
+    })
+  }, [])
+
+  useEffect(() => {
+    const loadMMD = async (): Promise<void> => {
+      if (!sceneRendered || !mmdModelDir || !mmdModelPath || !mmdRuntimeRef.current) return
+      if (mmdModelRef.current) {
+        mmdRuntimeRef.current.destroyMmdModel(mmdModelRef.current)
+        mmdModelRef.current.mesh.dispose()
+      }
+      SceneLoader.ImportMeshAsync(undefined, mmdModelDir, mmdModelPath, sceneRef.current).then(
         (result) => {
           const mesh = result.meshes[0]
           for (const m of mesh.metadata.meshes) {
@@ -111,15 +133,8 @@ function MMDScene({
         }
       )
     }
-
-    if (canvasRef.current) {
-      createScene(canvasRef.current).then((scene) => {
-        sceneRef.current = scene
-        loadMMD()
-      })
-    }
-  }, [])
-
+    loadMMD()
+  }, [sceneRendered, sceneRef, mmdRuntimeRef, mmdModelDir, mmdModelPath])
   useEffect(() => {
     const lerpFactor = 0.5
     const scale = 10
