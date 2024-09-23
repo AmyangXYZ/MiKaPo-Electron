@@ -1,11 +1,6 @@
 import { useEffect } from 'react'
 
-import {
-  FilesetResolver,
-  PoseLandmarker,
-  NormalizedLandmark,
-  FaceLandmarker
-} from '@mediapipe/tasks-vision'
+import { FilesetResolver, NormalizedLandmark, HolisticLandmarker } from '@mediapipe/tasks-vision'
 
 function Video({
   videoSrc,
@@ -22,32 +17,15 @@ function Video({
 }): JSX.Element {
   useEffect(() => {
     FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm'
     ).then(async (vision) => {
-      const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+      const holisticLandmarker = await HolisticLandmarker.createFromOptions(vision, {
         baseOptions: {
           modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+            'https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task',
           delegate: 'GPU'
         },
-        runningMode: 'VIDEO',
-        minPosePresenceConfidence: 0.5,
-        minPoseDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5,
-        outputSegmentationMasks: false
-      })
-      const faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-          delegate: 'GPU'
-        },
-
-        runningMode: 'VIDEO',
-        outputFaceBlendshapes: true,
-        numFaces: 1,
-        minFacePresenceConfidence: 0.2,
-        minFaceDetectionConfidence: 0.2
+        runningMode: 'VIDEO'
       })
 
       let lastTime = performance.now()
@@ -58,18 +36,24 @@ function Video({
           videoRef.current.videoWidth > 0
         ) {
           lastTime = videoRef.current.currentTime
-          poseLandmarker.detectForVideo(videoRef.current, performance.now(), (result) => {
-            setPose(result.worldLandmarks[0])
+          holisticLandmarker.detectForVideo(videoRef.current, performance.now(), (result) => {
+            if (result.poseWorldLandmarks[0]) {
+              setPose(result.poseWorldLandmarks[0])
+            } else {
+              setPose([])
+            }
+            if (result.faceLandmarks && result.faceLandmarks.length > 0) {
+              setFace(result.faceLandmarks[0])
+            } else {
+              setFace([])
+            }
           })
-
-          const faceResult = faceLandmarker.detectForVideo(videoRef.current, performance.now(), {})
-          setFace(faceResult.faceLandmarks[0])
         }
         requestAnimationFrame(detect)
       }
       detect()
     })
-  }, [setPose, setFace])
+  }, [setPose, setFace, videoRef])
 
   return (
     <div className="videoContainer">
@@ -80,6 +64,7 @@ function Video({
         disablePictureInPicture
         controlsList="nofullscreen noremoteplayback"
         src={isCameraActive ? undefined : videoSrc}
+        preload="auto"
       />
     </div>
   )
