@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ArcRotateCamera,
-  BackgroundMaterial,
   Color3,
   Color4,
   DirectionalLight,
@@ -9,20 +8,28 @@ import {
   HemisphericLight,
   Matrix,
   Mesh,
-  MeshBuilder,
   Quaternion,
+  registerSceneLoaderPlugin,
   Scene,
   SceneLoader,
-  ShadowGenerator,
   Space,
-  Texture,
   Vector3
 } from '@babylonjs/core'
 import { NormalizedLandmark } from '@mediapipe/tasks-vision'
-import { MmdAmmoJSPlugin, MmdAmmoPhysics, MmdModel, MmdRuntime } from 'babylon-mmd'
-import backgroundGroundUrl from './assets/backgroundGround.png'
+import {
+  getMmdWasmInstance,
+  MmdWasmInstanceTypeMPD,
+  MmdWasmModel,
+  MmdWasmPhysics,
+  MmdWasmRuntime,
+  PmxLoader,
+  SdefInjector
+} from 'babylon-mmd'
 import type { IMmdRuntimeLinkedBone } from 'babylon-mmd/esm/Runtime/IMmdRuntimeLinkedBone'
-import ammoPhysics from './ammo/ammo.wasm'
+
+import '@babylonjs/core/Engines/shaderStore'
+
+registerSceneLoaderPlugin(new PmxLoader())
 
 function MMDScene({
   pose,
@@ -34,26 +41,23 @@ function MMDScene({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
   const [sceneRendered, setSceneRendered] = useState<boolean>(false)
-  const [mmdModelDir, setMmdModelDir] = useState<string>('./model/Thoth/')
-  const [mmdModelPath, setMmdModelPath] = useState<string>('Thoth.pmx')
-  const mmdRuntimeRef = useRef<MmdRuntime | null>(null)
-  const mmdModelRef = useRef<MmdModel | null>(null)
-  const shadowGeneratorRef = useRef<ShadowGenerator | null>(null)
+  const mmdModelRef = useRef<MmdWasmModel | null>(null)
+  const mmdRuntimeRef = useRef<MmdWasmRuntime | null>(null)
+  const [mmdModelDir, setMmdModelDir] = useState<string>('./model/深空之眼-托特/')
+  const [mmdModelPath, setMmdModelPath] = useState<string>('深空之眼-托特.pmx')
+  const lerpFactor = 0.5
 
   useEffect(() => {
     const createScene = async (canvas: HTMLCanvasElement): Promise<Scene> => {
       const engine = new Engine(canvas, true, {}, true)
+      SdefInjector.OverrideEngineCreateEffect(engine)
       const scene = new Scene(engine)
       scene.clearColor = new Color4(0, 0, 0, 0)
-
-      const physicsInstance = await ammoPhysics()
-      const physicsPlugin = new MmdAmmoJSPlugin(true, physicsInstance)
-      scene.enablePhysics(new Vector3(0, -98, 0), physicsPlugin)
-      mmdRuntimeRef.current = new MmdRuntime(scene, new MmdAmmoPhysics(scene))
+      const mmdWasmInstance = await getMmdWasmInstance(new MmdWasmInstanceTypeMPD(), 2)
+      mmdRuntimeRef.current = new MmdWasmRuntime(mmdWasmInstance, scene, new MmdWasmPhysics(scene))
       mmdRuntimeRef.current.register(scene)
-
-      const camera = new ArcRotateCamera('ArcRotateCamera', 0, 0, 45, new Vector3(0, 12, 0), scene)
-      camera.setPosition(new Vector3(0, 20, -25))
+      const camera = new ArcRotateCamera('ArcRotateCamera', 0, 0, 45, new Vector3(0, 17, 0), scene)
+      camera.setPosition(new Vector3(0, 18, -10))
       camera.attachControl(canvas, false)
       camera.inertia = 0.8
       camera.speed = 10
@@ -70,29 +74,6 @@ function MMDScene({
       )
       directionalLight.intensity = 0.8
 
-      shadowGeneratorRef.current = new ShadowGenerator(1024, directionalLight, true)
-      shadowGeneratorRef.current.usePercentageCloserFiltering = true
-      shadowGeneratorRef.current.forceBackFacesOnly = true
-      shadowGeneratorRef.current.filteringQuality = ShadowGenerator.QUALITY_MEDIUM
-      shadowGeneratorRef.current.frustumEdgeFalloff = 0.1
-      shadowGeneratorRef.current.transparencyShadow = true
-
-      const backgroundMaterial = new BackgroundMaterial('backgroundMaterial', scene)
-      backgroundMaterial.diffuseTexture = new Texture(backgroundGroundUrl, scene)
-      backgroundMaterial.diffuseTexture.hasAlpha = true
-      backgroundMaterial.opacityFresnel = false
-      backgroundMaterial.shadowLevel = 0.4
-      backgroundMaterial.useRGBColor = false
-      backgroundMaterial.primaryColor = Color3.Magenta()
-      const ground = MeshBuilder.CreateGround('Ground', {
-        width: 36,
-        height: 36,
-        subdivisions: 2,
-        updatable: false
-      })
-      ground.material = backgroundMaterial
-      ground.receiveShadows = true
-
       engine.runRenderLoop(() => {
         engine.resize()
         scene!.render()
@@ -106,7 +87,7 @@ function MMDScene({
         setSceneRendered(true)
       })
     }
-  }, [])
+  }, [setSceneRendered])
 
   useEffect(() => {
     window.electron.ipcRenderer.on('selected-char', (_, data) => {
@@ -125,10 +106,6 @@ function MMDScene({
       SceneLoader.ImportMeshAsync(undefined, mmdModelDir, mmdModelPath, sceneRef.current).then(
         (result) => {
           const mesh = result.meshes[0]
-          for (const m of mesh.metadata.meshes) {
-            m.receiveShadows = true
-          }
-          shadowGeneratorRef.current!.addShadowCaster(mesh)
           mmdModelRef.current = mmdRuntimeRef.current!.createMmdModel(mesh as Mesh)
         }
       )
@@ -136,7 +113,6 @@ function MMDScene({
     loadMMD()
   }, [sceneRendered, sceneRef, mmdRuntimeRef, mmdModelDir, mmdModelPath])
   useEffect(() => {
-    const lerpFactor = 0.5
     const scale = 10
     const yOffset = 7
     const visibilityThreshold = 0.1
@@ -175,7 +151,10 @@ function MMDScene({
       left_foot_index: 31,
       right_foot_index: 32
     }
-    const updateMMDPose = (mmdModel: MmdModel | null, pose: NormalizedLandmark[] | null): void => {
+    const updateMMDPose = (
+      mmdModel: MmdWasmModel | null,
+      pose: NormalizedLandmark[] | null
+    ): void => {
       if (!pose || !mmdModel || pose.length === 0) {
         return
       }
@@ -186,8 +165,21 @@ function MMDScene({
           ? new Vector3(point.x, point.y, point.z)
           : null
       }
+
       const getBone = (name: string): IMmdRuntimeLinkedBone | undefined => {
         return mmdModel!.skeleton.bones.find((bone) => bone.name === name)
+      }
+
+      const moveCenter = (): void => {
+        const leftHip = getKeypoint('left_hip')
+        const rightHip = getKeypoint('right_hip')
+        const centerBone = getBone('センター')
+        if (leftHip && rightHip && centerBone) {
+          const hipCenter = leftHip.add(rightHip).scale(0.5)
+          hipCenter.scaleInPlace(scale)
+          hipCenter.y += yOffset
+          centerBone.position = Vector3.Lerp(centerBone.position, hipCenter, lerpFactor)
+        }
       }
 
       const rotateHead = (): void => {
@@ -196,24 +188,45 @@ function MMDScene({
         const rightShoulder = getKeypoint('right_shoulder')
         const neckBone = getBone('首')
         const upperBodyBone = getBone('上半身')
+
         if (nose && leftShoulder && rightShoulder && neckBone && upperBodyBone) {
           const neckPos = leftShoulder.add(rightShoulder).scale(0.5)
           const headDir = nose.subtract(neckPos).normalize()
 
-          const upperBodyRotation = Quaternion.Slerp(
-            upperBodyBone.rotationQuaternion || new Quaternion(),
-            Quaternion.FromLookDirectionLH(headDir, Vector3.Up()),
-            lerpFactor
-          )
+          // Get the upper body's current rotation
+          const upperBodyRotation = upperBodyBone.rotationQuaternion || new Quaternion()
           const upperBodyRotationMatrix = new Matrix()
           Matrix.FromQuaternionToRef(upperBodyRotation, upperBodyRotationMatrix)
+
+          // Transform head direction to local space relative to upper body
           const localHeadDir = Vector3.TransformNormal(headDir, upperBodyRotationMatrix.invert())
-          const localHeadQuat = Quaternion.FromLookDirectionLH(localHeadDir, Vector3.Up())
+
+          const forwardDir = new Vector3(localHeadDir.x, 0, localHeadDir.z).normalize()
+
+          const tiltAngle = Math.atan2(-localHeadDir.y, forwardDir.length())
+
+          // Add a constant offset to the tilt angle to correct the head orientation
+          const tiltOffset = -Math.PI / 5 // Adjust this value as needed
+          const adjustedTiltAngle = tiltAngle + tiltOffset
+
+          const horizontalQuat = Quaternion.FromLookDirectionLH(forwardDir, Vector3.Up())
+
+          const tiltQuat = Quaternion.RotationAxis(Vector3.Right(), adjustedTiltAngle)
+
+          const combinedQuat = horizontalQuat.multiply(tiltQuat)
+
+          // Apply rotation limits
+          const maxRotationAngle = Math.PI / 3 // 60 degrees
+          const clampedQuat = Quaternion.FromEulerAngles(
+            Math.max(-maxRotationAngle, Math.min(maxRotationAngle, combinedQuat.toEulerAngles().x)),
+            Math.max(-maxRotationAngle, Math.min(maxRotationAngle, combinedQuat.toEulerAngles().y)),
+            Math.max(-maxRotationAngle, Math.min(maxRotationAngle, combinedQuat.toEulerAngles().z))
+          )
 
           neckBone.setRotationQuaternion(
             Quaternion.Slerp(
               neckBone.rotationQuaternion || new Quaternion(),
-              localHeadQuat,
+              clampedQuat,
               lerpFactor
             ),
             Space.LOCAL
@@ -432,7 +445,7 @@ function MMDScene({
             upperArmRotationMatrix.invert()
           )
 
-          const defaultDir = new Vector3(side === 'left' ? -1 : 1, 1, 0)
+          const defaultDir = new Vector3(side === 'left' ? -1 : 1, 1, 0).normalize()
 
           // Calculate the rotation from default pose to current pose
           const rotationQuaternion = Quaternion.FromUnitVectorsToRef(
@@ -505,6 +518,7 @@ function MMDScene({
         }
       }
 
+      moveCenter()
       rotateHead()
       rotateUpperBody()
       rotateLowerBody()
@@ -524,10 +538,13 @@ function MMDScene({
     if (sceneRef.current && mmdModelRef.current) {
       updateMMDPose(mmdModelRef.current, pose)
     }
-  }, [pose])
+  }, [pose, lerpFactor])
 
   useEffect(() => {
-    const updateMMDFace = (mmdModel: MmdModel | null, face: NormalizedLandmark[] | null): void => {
+    const updateMMDFace = (
+      mmdModel: MmdWasmModel | null,
+      face: NormalizedLandmark[] | null
+    ): void => {
       if (!face || !mmdModel || face.length === 0) {
         return
       }
@@ -727,7 +744,12 @@ function MMDScene({
       updateMMDFace(mmdModelRef.current, face)
     }
   }, [face])
-  return <canvas ref={canvasRef} className="scene"></canvas>
+
+  return (
+    <>
+      <canvas ref={canvasRef} className="scene"></canvas>
+    </>
+  )
 }
 
 export default MMDScene

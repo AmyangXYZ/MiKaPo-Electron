@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, screen } from 'electron'
 import { basename, dirname, join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -7,10 +7,19 @@ import { Ollama } from 'ollama'
 const ollama = new Ollama()
 
 function createWindow(): void {
+  const display = screen.getPrimaryDisplay()
+  // Create the browser window.
+  const width = 360
+  const height = 480
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 560,
-    height: 800,
+    width: width,
+    height: height,
+    minWidth: width,
+    minHeight: height,
+    x: display.bounds.width - width,
+    y: display.bounds.height - height - 20,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -18,9 +27,23 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       webSecurity: false
-    }
-    // frame: false,
-    // transparent: true
+    },
+    frame: false,
+    transparent: true,
+    resizable: false
+  })
+
+  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  mainWindow.setAlwaysOnTop(true, 'screen-saver', 1)
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Cross-Origin-Opener-Policy': ['same-origin'],
+        'Cross-Origin-Embedder-Policy': ['require-corp']
+      }
+    })
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -31,6 +54,19 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  ipcMain.on('minimize', () => mainWindow.minimize())
+  let isFullScreen = false
+  ipcMain.on('fullscreen', () => {
+    if (!isFullScreen) {
+      mainWindow.setFullScreen(true)
+      isFullScreen = true
+    } else {
+      mainWindow.setFullScreen(false)
+      isFullScreen = false
+    }
+  })
+  ipcMain.on('quit', () => app.quit())
 
   // Handle IPC messages from renderer
   ipcMain.handle('ollama-generate', async (_, modelName, prompt) => {

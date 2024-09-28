@@ -1,20 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { FilesetResolver, NormalizedLandmark, HolisticLandmarker } from '@mediapipe/tasks-vision'
 
 function Video({
-  videoSrc,
-  videoRef,
-  isCameraActive,
   setPose,
   setFace
 }: {
-  videoSrc: string
-  videoRef: React.RefObject<HTMLVideoElement>
-  isCameraActive: boolean
   setPose: (pose: NormalizedLandmark[]) => void
   setFace: (face: NormalizedLandmark[]) => void
 }): JSX.Element {
+  const videoRef = useRef<HTMLVideoElement>(null)
   useEffect(() => {
     FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm'
@@ -27,6 +22,12 @@ function Video({
         },
         runningMode: 'VIDEO'
       })
+
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.play()
+      }
 
       let lastTime = performance.now()
       const detect = (): void => {
@@ -57,15 +58,7 @@ function Video({
 
   return (
     <div className="videoContainer">
-      <video
-        ref={videoRef}
-        controls={!isCameraActive}
-        playsInline
-        disablePictureInPicture
-        controlsList="nofullscreen noremoteplayback"
-        src={isCameraActive ? undefined : videoSrc}
-        preload="auto"
-      />
+      <video ref={videoRef} playsInline />
     </div>
   )
 }

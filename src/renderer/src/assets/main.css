@@ -13,9 +13,8 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-image: url('./wavy-lines.svg');
-  /* background:transparent */
-  background-size: cover;
+  /* background-image: url('./wavy-lines.svg'); */
+  background: transparent;
   user-select: none;
 }
 
@@ -25,10 +24,6 @@ body {
 }
 
 .react {
-  background: -webkit-linear-gradient(315deg, #087ea4 55%, #7c93ee);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   font-weight: 700;
 }
 
@@ -38,7 +33,7 @@ body {
   left: 0;
   width: 100%;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  /* background-color: rgba(0, 0, 0, 0.5); */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -65,20 +60,27 @@ body {
 }
 
 .toolbar {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 3;
+  z-index: 1010;
   height: 2rem;
+  -webkit-app-region: drag;
+  background: black;
+}
+
+.toolbar-item {
+  -webkit-app-region: no-drag;
 }
 
 video {
   position: absolute;
-  top: 2.2rem;
+  bottom: 0rem;
   left: 0;
-  width: 160px;
+  width: 100px;
   z-index: 2;
+  display: none;
 }
 
 .scene {
@@ -93,9 +95,10 @@ video {
 
 .chat {
   position: absolute;
-  width: 200px;
-  bottom: 10%;
+  width: 100%;
+  top: 10%;
   right: 15%;
   width: 70%;
   z-index: 1010;
+  -webkit-app-region: drag;
 }
