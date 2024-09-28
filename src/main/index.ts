@@ -30,7 +30,7 @@ function createWindow(): void {
     },
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: true,
     icon: icon
   })
 
