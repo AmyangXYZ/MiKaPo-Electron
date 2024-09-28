@@ -4,6 +4,7 @@ Desktop version of [MiKaPo](https://mikapo.amyang.dev), supports ollama.
 
 <img src="./screenshot.png" alt="screenshot" width="400px" />
 
+<img src="./screenshot2.png" alt="screenshot" width="400px" />
 ## Project Setup
 
 ### Install

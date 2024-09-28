@@ -30,7 +30,8 @@ function createWindow(): void {
     },
     frame: false,
     transparent: true,
-    resizable: false
+    resizable: false,
+    icon: icon
   })
 
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
