@@ -3,34 +3,26 @@ import Video from './Video'
 import MMDScene from './MMDScene'
 import { NormalizedLandmark } from '@mediapipe/tasks-vision'
 import Chat from './Chat'
-import { AccessibilityNew } from '@mui/icons-material'
-import { IconButton } from '@mui/material'
+
+import Titlebar from './Titlebar'
 
 function App(): JSX.Element {
   const [pose, setPose] = useState<NormalizedLandmark[] | null>(null)
   const [face, setFace] = useState<NormalizedLandmark[] | null>(null)
-
-  const handleMMDModelUpload = (): void => {
-    window.electron.ipcRenderer.send('dialog-char', {})
-  }
-
+  const [isTitlebarVisible, setIsTitlebarVisible] = useState(false)
   return (
-    <>
+    <div onClick={() => setIsTitlebarVisible(false)}>
       {pose === null && (
         <div className="loading-overlay">
           <div className="loader"></div>
           <h3>Initializing AI and MMD...</h3>
         </div>
       )}
-      <div className="toolbar">
-        <IconButton color="info" component="label" onClick={handleMMDModelUpload}>
-          <AccessibilityNew />
-        </IconButton>
-      </div>
-      <Video setPose={setPose} setFace={setFace}></Video>
-      <MMDScene pose={pose} face={face}></MMDScene>
-      <Chat></Chat>
-    </>
+      <Titlebar isTitlebarVisible={isTitlebarVisible} setIsTitlebarVisible={setIsTitlebarVisible} />
+      <Video setPose={setPose} setFace={setFace} />
+      <MMDScene pose={pose} face={face} />
+      <Chat />
+    </div>
   )
 }
 

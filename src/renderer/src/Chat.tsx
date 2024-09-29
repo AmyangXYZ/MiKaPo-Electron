@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react'
 
 function Chat(): JSX.Element {
   const chat = useRef<string>('')
-
   useEffect(() => {
     const generate = async (): Promise<void> => {
       try {
-        const response = await window.ollamaAPI.generate('llama3.1', 'hello')
+        const response = await window.ollamaAPI.generate('llama3.2:1b', 'Hello')
         chat.current = response.response
       } catch (error) {
         console.error(error)
@@ -14,7 +13,12 @@ function Chat(): JSX.Element {
     }
     generate()
   }, [])
-  return <div className="chat">{chat.current}</div>
+
+  return (
+    <>
+      <div className="chat">{chat.current}</div>
+    </>
+  )
 }
 
 export default Chat
