@@ -12,12 +12,6 @@ function App(): JSX.Element {
   const [isTitlebarVisible, setIsTitlebarVisible] = useState(false)
   return (
     <div onClick={() => setIsTitlebarVisible(false)}>
-      {pose === null && (
-        <div className="loading-overlay">
-          <div className="loader"></div>
-          <h3>Initializing AI and MMD...</h3>
-        </div>
-      )}
       <Titlebar isTitlebarVisible={isTitlebarVisible} setIsTitlebarVisible={setIsTitlebarVisible} />
       <Video setPose={setPose} setFace={setFace} />
       <MMDScene pose={pose} face={face} />
