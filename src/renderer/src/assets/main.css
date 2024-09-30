@@ -62,7 +62,7 @@ body {
   position: fixed;
   top: 0;
   left: 0;
-  width: calc(100% - 2rem);
+  width: 100%;
   height: 2rem;
   z-index: 1010;
 }
@@ -70,18 +70,20 @@ body {
 .titlebar {
   width: 100%;
   height: 100%;
-  padding: 0 0.5rem;
+  padding: 0rem;
   background: black;
   opacity: 1;
   display: flex;
   align-items: right;
   justify-content: space-between;
-  border-radius: 16px;
+  border-radius: 10px;
   opacity: 0.8;
   -webkit-app-region: drag;
 }
 
 .titlebar-item {
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
   display: flex;
   align-items: center;
   justify-content: center;

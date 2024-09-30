@@ -36,15 +36,11 @@ function Titlebar({
     >
       {isTitlebarVisible && (
         <div className="titlebar">
-          <IconButton
-            className="titlebar-item"
-            color="error"
-            component="label"
-            onClick={handleMMDModelUpload}
-            size="small"
-          >
-            <AccessibilityNew />
-          </IconButton>
+          <div className="titlebar-item">
+            <IconButton color="error" component="label" onClick={handleMMDModelUpload} size="small">
+              <AccessibilityNew />
+            </IconButton>
+          </div>
           <div className="titlebar-item">
             <IconButton color="secondary" component="label" onClick={handleMinimize} size="small">
               <Remove />

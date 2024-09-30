@@ -16,8 +16,6 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: width,
     height: height,
-    minWidth: width,
-    minHeight: height,
     x: display.bounds.width - width,
     y: display.bounds.height - height - 20,
     show: false,
@@ -26,7 +24,8 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webSecurity: false
+      webSecurity: false,
+      backgroundThrottling: false
     },
     frame: false,
     transparent: true,
