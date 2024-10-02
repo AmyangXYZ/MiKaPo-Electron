@@ -4,10 +4,14 @@ import { FilesetResolver, NormalizedLandmark, HolisticLandmarker } from '@mediap
 
 function Video({
   setPose,
-  setFace
+  setFace,
+  setLeftHand,
+  setRightHand
 }: {
   setPose: (pose: NormalizedLandmark[]) => void
   setFace: (face: NormalizedLandmark[]) => void
+  setLeftHand: (leftHand: NormalizedLandmark[]) => void
+  setRightHand: (rightHand: NormalizedLandmark[]) => void
 }): JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
   useEffect(() => {
@@ -47,6 +51,16 @@ function Video({
               setFace(result.faceLandmarks[0])
             } else {
               setFace([])
+            }
+            if (result.leftHandWorldLandmarks && result.leftHandWorldLandmarks.length > 0) {
+              setLeftHand(result.leftHandWorldLandmarks[0])
+            } else {
+              setLeftHand([])
+            }
+            if (result.rightHandWorldLandmarks && result.rightHandWorldLandmarks.length > 0) {
+              setRightHand(result.rightHandWorldLandmarks[0])
+            } else {
+              setRightHand([])
             }
           })
         }

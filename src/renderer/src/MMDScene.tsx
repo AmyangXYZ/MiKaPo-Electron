@@ -33,10 +33,14 @@ registerSceneLoaderPlugin(new PmxLoader())
 
 function MMDScene({
   pose,
-  face
+  face,
+  leftHand,
+  rightHand
 }: {
   pose: NormalizedLandmark[] | null
   face: NormalizedLandmark[] | null
+  leftHand: NormalizedLandmark[] | null
+  rightHand: NormalizedLandmark[] | null
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
@@ -744,6 +748,101 @@ function MMDScene({
       updateMMDFace(mmdModelRef.current, face)
     }
   }, [face])
+
+  useEffect(() => {
+    const updateMMDFingers = (
+      mmdModel: MmdWasmModel | null,
+      hand: NormalizedLandmark[] | null,
+      side: 'left' | 'right'
+    ): void => {
+      if (!mmdModel || !hand) return
+
+      const fingerNames = ['親指', '人指', '中指', '薬指', '小指']
+      const fingerJoints = ['', '１', '２', '３']
+      const maxAngle = Math.PI / 2
+      const maxEndSegmentAngle = (Math.PI * 2) / 3 // 120 degrees for end segments
+      const fingerBaseIndices = [1, 5, 9, 13, 17]
+
+      const getBone = (name: string): IMmdRuntimeLinkedBone | undefined => {
+        return mmdModel!.skeleton.bones.find((bone) => bone.name === name)
+      }
+
+      fingerNames.forEach((fingerName, fingerIndex) => {
+        fingerJoints.forEach((joint, jointIndex) => {
+          const boneName = `${side === 'left' ? '左' : '右'}${fingerName}${joint}`
+          const bone = getBone(boneName)
+
+          if (bone) {
+            const baseIndex = fingerBaseIndices[fingerIndex]
+            const currentIndex = baseIndex + jointIndex
+            const nextIndex = baseIndex + jointIndex + 1
+
+            let rotationAngle = 0
+
+            if (nextIndex < hand.length) {
+              const currentPoint = new Vector3(
+                hand[currentIndex].x,
+                hand[currentIndex].y,
+                hand[currentIndex].z
+              )
+              const nextPoint = new Vector3(hand[nextIndex].x, hand[nextIndex].y, hand[nextIndex].z)
+
+              // Calculate the angle between the current segment and the next segment
+              const segmentVector = nextPoint.subtract(currentPoint)
+
+              let defaultVector: Vector3
+              if (fingerName === '親指') {
+                defaultVector = new Vector3(side === 'left' ? -1 : 1, 1, 0) // Pointing inward
+              } else {
+                defaultVector = new Vector3(0, -1, 0) // Other fingers point downwards when straight
+              }
+              rotationAngle = Vector3.GetAngleBetweenVectors(
+                segmentVector,
+                defaultVector,
+                new Vector3(1, 0, 0)
+              )
+
+              // Determine the maximum angle based on whether it's the end segment
+              const isEndSegment = jointIndex === 3
+              const currentMaxAngle = isEndSegment ? maxEndSegmentAngle : maxAngle
+
+              // Limit the rotation angle
+              rotationAngle = Math.min(Math.max(rotationAngle, 0), currentMaxAngle)
+
+              // Force fix for end segments if the angle is too large
+              if (isEndSegment && rotationAngle > maxAngle) {
+                rotationAngle = 0
+              }
+            }
+
+            let defaultDir: Vector3
+
+            if (boneName.includes('親指')) {
+              defaultDir = new Vector3(-1, side === 'left' ? -1 : 1, 0).normalize()
+            } else {
+              defaultDir = new Vector3(0, 0, side === 'left' ? -1 : 1).normalize()
+            }
+
+            const rotation = defaultDir.scale(rotationAngle)
+
+            bone.setRotationQuaternion(
+              Quaternion.Slerp(
+                bone.rotationQuaternion || new Quaternion(),
+                Quaternion.FromEulerAngles(rotation.x, rotation.y, rotation.z),
+                lerpFactor
+              ),
+              Space.LOCAL
+            )
+          }
+        })
+      })
+    }
+
+    if (sceneRef.current && mmdModelRef.current) {
+      updateMMDFingers(mmdModelRef.current, leftHand, 'left')
+      updateMMDFingers(mmdModelRef.current, rightHand, 'right')
+    }
+  }, [leftHand, rightHand])
 
   return (
     <>

@@ -1,10 +1,9 @@
 # MiKaPo-Electron
 
-Desktop version of [MiKaPo](https://mikapo.amyang.dev), supports ollama.
-
-<img src="./screenshot.png" alt="screenshot" width="400px" />
+Desktop version of [MiKaPo](https://mikapo.amyang.dev), supports ollama and takes input **only** from the webcam.
 
 <img src="./screenshot2.png" alt="screenshot"  />
+
 ## Project Setup
 
 ### Install
